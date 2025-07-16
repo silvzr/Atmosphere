@@ -2,6 +2,8 @@ ATMOSPHERE_BUILD_CONFIGS :=
 all: nx_release
 clean: clean-nx_release
 
+.NOTPARALLEL:
+
 THIS_MAKEFILE     := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIRECTORY := $(abspath $(dir $(THIS_MAKEFILE)))
 

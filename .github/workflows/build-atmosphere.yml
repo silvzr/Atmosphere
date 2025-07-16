@@ -1,0 +1,81 @@
+name: Build Atmosphere
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'nx_release'
+        type: choice
+        options:
+          - nx_release
+          - nx_debug
+          - nx_audit
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Resize swap
+      uses: actionhippie/swap-space@v1.1.0
+      with:
+        size: 16G
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install lz4 pycryptodome
+
+    - name: Install devkitPro
+      run: |
+        wget https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x ./install-devkitpro-pacman
+        sudo ./install-devkitpro-pacman
+        sudo dkp-pacman -S --noconfirm switch-dev switch-glm switch-libjpeg-turbo devkitARM devkitarm-rules hactool
+
+    - name: Setup environment variables
+      run: |
+        echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+        echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+        echo "DEVKITA64=/opt/devkitpro/devkitA64" >> $GITHUB_ENV
+        echo "/opt/devkitpro/tools/bin" >> $GITHUB_PATH
+        echo "/usr/local/bin" >> $GITHUB_PATH
+
+    - name: Build Atmosphere
+      run: |
+        if [ "${{ github.event.inputs.build_type }}" = "nx_release" ]; then
+          make -j$(nproc) -f atmosphere.mk dist-no-debug
+        else
+          make -j$(nproc) ${{ github.event.inputs.build_type }}
+        fi
+
+    - name: Upload release artifacts
+      if: github.event.inputs.build_type == 'nx_release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: atmosphere-release-${{ github.sha }}
+        path: |
+          out/nintendo_nx_arm64_armv8a/release/*
+        retention-days: 90
+
+    - name: Upload debug/audit artifacts
+      if: github.event.inputs.build_type != 'nx_release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: atmosphere-${{ github.event.inputs.build_type }}-${{ github.sha }}
+        path: |
+          out/
+        retention-days: 30

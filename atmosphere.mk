@@ -1,6 +1,8 @@
 #---------------------------------------------------------------------------------
 # pull in common atmosphere configuration
 #---------------------------------------------------------------------------------
+.NOTPARALLEL:
+
 THIS_MAKEFILE     := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIRECTORY := $(abspath $(dir $(THIS_MAKEFILE)))
 include $(CURRENT_DIRECTORY)/libraries/config/common.mk
